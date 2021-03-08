@@ -10,6 +10,10 @@ const app = express()
 app.use(cors())
 app.use(bodyParser.json())
 
+var studentsG;
+//var datajson = {students : []};
+var datajson = [];
+
 function aleatorio() {
 	var number = Math.round((Math.random()*(6)+1)*1000);
 	console.log(number);
@@ -31,12 +35,13 @@ var studentSchema = {
 };
 
 var Student = mongoose.model("Student", studentSchema);
-
+/*
 var dataC = {
     surname: "Buitrago",
     lastname: "Juna",
     phone: "gfw232"
 };
+*/
 
 app.post('/new_student', async(req, res) => {
     console.log("llega del mid")
@@ -47,9 +52,10 @@ app.post('/new_student', async(req, res) => {
     });
     Student.find({}, function(error, students){
         if(error){
-           res.send('Error.');
+            res.send('Error.');
         }else{
-           res.send(students);
+            studentsG = students;
+            res.send(students);
         }
      })
 })
@@ -59,6 +65,43 @@ app.get('/', function (req, res) {
         res.send('oks');
     },aleatorio());	
 });
+
+//El backup pide la información cada cierto tiempo
+app.get('/students_backup', (req,res) => {
+    res.send(studentsG)
+})
+
+//Asigna DB al servidor nuevo, solo se ejecuta una vez, apenas se crea, se llama al backup
+app.get('/recovery_db', async(req, res) => {
+    //req.body
+    await axios.get(`http://localhost:${4320}/backup_info`)
+    .then(function (response) {
+        //Hace una petición GET al servidor
+        datajson = response.data;
+        fillDB();
+        res.sendStatus(200);
+    }).catch(function (error) {
+        res.sendStatus(404);
+    });
+});
+
+//Restaura la BD cuando crea la nueva instancia
+async function fillDB() {
+    for(var i=0;i< datajson.students.length;i++){
+        console.log('-------------inicio------' + i);
+        console.log('Surname:' + datajson.students[i].surname);
+        console.log('lastName:' + datajson.students[i].lastname);
+        console.log('Phone:' + datajson.students[i].phone);
+        console.log('--------------fin-----' + i);
+        var student = new Student();
+        student.surname = datajson.students[i].surname;
+        student.lastname = datajson.students[i].lastname;
+        student.phone = datajson.students[i].phone;
+        await student.save(function(err) {
+            console.log('Agregado');
+        });
+    }
+  }
 
 app.listen(port, () => {
     console.log(`Example app listening at http://localhost:${port}`)
