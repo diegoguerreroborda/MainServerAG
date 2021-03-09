@@ -43,6 +43,7 @@ var dataC = {
 };
 */
 
+//Llega desde el middleware cuando se va a crear un nuevo estudiante
 app.post('/new_student', async(req, res) => {
     console.log("llega del mid")
     //console.log(req.body)
@@ -50,15 +51,28 @@ app.post('/new_student', async(req, res) => {
     await student.save(function(err) {
         console.log(student);
     });
-    Student.find({}, function(error, students){
+    await Student.find({}, function(error, students){
         if(error){
             res.send('Error.');
         }else{
             studentsG = students;
-            res.send(students);
+            res.send(students)
         }
-     })
+    })
+    console.log(`Antes ${studentsG}`)
+    //res.send(studentsG)
+    console.log(`Despues ${studentsG}`)
 })
+
+async function getListStudents(){
+    await Student.find({}, function(error, students){
+        if(error){
+            res.send('Error.');
+        }else{
+            studentsG = students;
+        }
+    })
+}
 
 app.get('/', function (req, res) {
     setTimeout(function(){
@@ -66,14 +80,33 @@ app.get('/', function (req, res) {
     },aleatorio());	
 });
 
-//El backup pide la información cada cierto tiempo
-app.get('/students_backup', (req,res) => {
-    res.send(studentsG)
+//Se le envia la info al backup cada cierto tiempo
+app.get('/students_backup', async(req,res) => {
+    //res.send(studentsG)
+    console.log("1")
+    await getListStudents();
+    console.log(studentsG)
+    axios({
+        method: 'post',
+        url : `http://localhost:${4320}/students_backup`,
+        data: {
+          students: studentsG
+        }
+    }).then(response => {
+        //datajson = response.data
+        //fillDB();
+        console.log("3")
+        res.sendStatus(200)
+    }).catch(err => {
+        res.sendStatus(404)
+        console.log(err);
+    }); 
 })
 
 //Asigna DB al servidor nuevo, solo se ejecuta una vez, apenas se crea, se llama al backup
 app.get('/recovery_db', async(req, res) => {
     //req.body
+    
     await axios.get(`http://localhost:${4320}/backup_info`)
     .then(function (response) {
         //Hace una petición GET al servidor
