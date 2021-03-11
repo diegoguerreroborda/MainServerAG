@@ -5,7 +5,8 @@ const shell = require('shelljs');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const port = 3000;
-const urlDB = 'mongodb://localhost/primera_pagina';
+//const urlDB = 'mongodb://localhost/primera_pagina';
+const urlDB = 'mongodb://mongo/primera_pagina';
 const app = express()
 app.use(cors())
 app.use(bodyParser.json())
@@ -86,15 +87,14 @@ app.get('/students_backup', async(req,res) => {
     console.log("1")
     await getListStudents();
     console.log(studentsG)
+    //`http://172.19.0.1:${4320}/students_backup`,
     axios({
         method: 'post',
-        url : `http://localhost:${4320}/students_backup`,
+        url : `http://172.17.0.1:${4320}/students_backup`,
         data: {
           students: studentsG
         }
     }).then(response => {
-        //datajson = response.data
-        //fillDB();
         console.log("3")
         res.sendStatus(200)
     }).catch(err => {
@@ -106,30 +106,33 @@ app.get('/students_backup', async(req,res) => {
 //Asigna DB al servidor nuevo, solo se ejecuta una vez, apenas se crea, se llama al backup
 app.get('/recovery_db', async(req, res) => {
     //req.body
-    
-    await axios.get(`http://localhost:${4320}/backup_info`)
+    console.log("entra")
+    await axios.get(`http://172.17.0.1:${4320}/backup_info`)
     .then(function (response) {
         //Hace una petición GET al servidor
         datajson = response.data;
         fillDB();
+        res.send(datajson)
         res.sendStatus(200);
     }).catch(function (error) {
+        console.log("400")
         res.sendStatus(404);
     });
+    res.send(datajson)
 });
 
 //Restaura la BD cuando crea la nueva instancia
 async function fillDB() {
-    for(var i=0;i< datajson.students.length;i++){
+    for(var i=0;i< datajson.length;i++){
         console.log('-------------inicio------' + i);
-        console.log('Surname:' + datajson.students[i].surname);
-        console.log('lastName:' + datajson.students[i].lastname);
-        console.log('Phone:' + datajson.students[i].phone);
+        console.log('Surname:' + datajson[i].surname);
+        console.log('lastName:' + datajson[i].lastname);
+        console.log('Phone:' + datajson[i].phone);
         console.log('--------------fin-----' + i);
         var student = new Student();
-        student.surname = datajson.students[i].surname;
-        student.lastname = datajson.students[i].lastname;
-        student.phone = datajson.students[i].phone;
+        student.surname = datajson[i].surname;
+        student.lastname = datajson[i].lastname;
+        student.phone = datajson[i].phone;
         await student.save(function(err) {
             console.log('Agregado');
         });

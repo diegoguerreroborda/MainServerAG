@@ -1,0 +1,16 @@
+version: "3"
+
+services:
+  servermain:
+    container_name: servernew${PORT}
+    restart: always
+    build: .
+    ports:
+      - "${PORT}:3000"
+    links:
+      - mongo
+  mongo:
+    container_name: mymongodatabase
+    image: mongo
+    ports: 
+      - "27018:27017"
